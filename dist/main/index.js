@@ -28800,13 +28800,13 @@ const path_1 = __nccwpck_require__(1017);
 function installSauceConnect(scVersion) {
     return __awaiter(this, void 0, void 0, function* () {
         let scPath = (0, tool_cache_1.find)('sc', scVersion, process.arch);
-        const name = `sc-${scVersion}-linux${process.arch === 'arm64' ? '-arm64' : ''}`;
+        const name = `sauce-connect-${scVersion}_linux.${process.arch === 'arm64' ? '-arm64' : ''}`;
         if (scPath) {
             (0, core_1.info)(`Found in cache @ ${scPath}`);
         }
         else {
-            (0, core_1.info)(`Attempting to download sc@${scVersion}...`);
-            const downloadedPath = yield (0, tool_cache_1.downloadTool)(`https://saucelabs.com/downloads/${name}.tar.gz`);
+            (0, core_1.info)(`Attempting to download sauce-connect@${scVersion}...`);
+            const downloadedPath = yield (0, tool_cache_1.downloadTool)(`https://saucelabs.com/downloads/sauce-connect/${scVersion}/${name}.tar.gz`);
             (0, core_1.info)('Extracting ...');
             const extractedPath = yield (0, tool_cache_1.extractTar)(downloadedPath);
             (0, core_1.info)('Adding to the cache ...');
@@ -28907,13 +28907,10 @@ const READY_FILE = (0, path_1.join)(tmp, 'sc.ready');
 const optionMappings = option_mapping_json_1.default;
 function buildOptions() {
     const params = [
-        `--logfile=${LOG_FILE}`,
+        `--log-file=${LOG_FILE}`,
         `--extra-info={"runner": "github-action"}`,
         `--readyfile=${READY_FILE}`
     ];
-    if ((0, core_1.isDebug)()) {
-        params.push('--verbose');
-    }
     for (const optionMapping of optionMappings) {
         const input = (0, core_1.getInput)(optionMapping.actionOption, {
             required: optionMapping.required
@@ -30929,7 +30926,7 @@ module.exports = parseParams
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('[{"actionOption":"username","scOption":"user","required":true},{"actionOption":"accessKey","scOption":"api-key","required":true},{"actionOption":"cainfo","scOption":"cainfo"},{"actionOption":"configFile","scOption":"config-file"},{"actionOption":"directDomains","scOption":"direct-domains"},{"actionOption":"dns","scOption":"dns"},{"actionOption":"fastFailRegexps","scOption":"fast-fail-regexps"},{"actionOption":"maxLogsize","scOption":"max-logsize"},{"actionOption":"metricsAddress","scOption":"status-address"},{"actionOption":"statusAddress","scOption":"status-address"},{"actionOption":"noAutodetect","scOption":"no-autodetect","flag":true},{"actionOption":"noRemoveCollidingTunnels","scOption":"no-remove-colliding-tunnels","flag":true},{"actionOption":"noSSLBumpDomains","scOption":"no-ssl-bump-domains"},{"actionOption":"pac","scOption":"pac"},{"actionOption":"proxy","scOption":"proxy"},{"actionOption":"proxyTunnel","scOption":"proxy-tunnel","flag":true},{"actionOption":"proxyUserpwd","scOption":"proxy-userpwd"},{"actionOption":"region","scOption":"region"},{"actionOption":"scproxyPort","scOption":"scproxy-port"},{"actionOption":"sePort","scOption":"se-port"},{"actionOption":"sharedTunnel","scOption":"shared-tunnel","flag":true},{"actionOption":"tunnelCainfo","scOption":"tunnel-cainfo"},{"actionOption":"tunnelDomains","scOption":"tunnel-domains"},{"actionOption":"tunnelIdentifier","scOption":"tunnel-identifier"},{"actionOption":"tunnelName","scOption":"tunnel-name"},{"actionOption":"tunnelPool","scOption":"tunnel-pool","flag":true},{"actionOption":"verbose","scOption":"verbose","flag":true}]');
+module.exports = JSON.parse('[{"actionOption":"username","scOption":"username","required":true},{"actionOption":"accessKey","scOption":"access-key","required":true},{"actionOption":"cacert-file","scOption":"cacert-file"},{"actionOption":"configFile","scOption":"config-file"},{"actionOption":"directDomains","scOption":"direct-domains"},{"actionOption":"dns","scOption":"dns-server"},{"actionOption":"denyDomains","scOption":"deny-domains"},{"actionOption":"metricsAddress","scOption":"api-address"},{"actionOption":"statusAddress","scOption":"status-address"},{"actionOption":"tunnelPool","scOption":"tunnel-pool","flag":true},{"actionOption":"tlsPassthroughDomains","scOption":"tls-passthrough-domains"},{"actionOption":"pac","scOption":"pac"},{"actionOption":"proxy","scOption":"proxy"},{"actionOption":"proxySauce","scOption":"proxy-sauce","flag":true},{"actionOption":"region","scOption":"region","required":true},{"actionOption":"scproxyPort","scOption":"scproxy-port"},{"actionOption":"sharedTunnel","scOption":"shared","flag":true},{"actionOption":"tunnelDomains","scOption":"tunnel-domains"},{"actionOption":"tunnelIdentifier","scOption":"tunnel-identifier"},{"actionOption":"tunnelName","scOption":"tunnel-name","required":true},{"actionOption":"tunnelPool","scOption":"tunnel-pool","flag":true}]');
 
 /***/ })
 

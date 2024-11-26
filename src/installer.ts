@@ -4,16 +4,16 @@ import {join} from 'path'
 
 export async function installSauceConnect(scVersion: string): Promise<void> {
     let scPath = find('sc', scVersion, process.arch)
-    const name = `sc-${scVersion}-linux${
+    const name = `sauce-connect-${scVersion}_linux.${
         process.arch === 'arm64' ? '-arm64' : ''
     }`
 
     if (scPath) {
         info(`Found in cache @ ${scPath}`)
     } else {
-        info(`Attempting to download sc@${scVersion}...`)
+        info(`Attempting to download sauce-connect@${scVersion}...`)
         const downloadedPath = await downloadTool(
-            `https://saucelabs.com/downloads/${name}.tar.gz`
+            `https://saucelabs.com/downloads/sauce-connect/${scVersion}/${name}.tar.gz`
         )
 
         info('Extracting ...')

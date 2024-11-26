@@ -1,17 +1,17 @@
 [
     {
         "actionOption": "username",
-        "scOption": "user",
+        "scOption": "username",
         "required": true
     },
     {
         "actionOption": "accessKey",
-        "scOption": "api-key",
+        "scOption": "access-key",
         "required": true
     },
     {
-        "actionOption": "cainfo",
-        "scOption": "cainfo"
+        "actionOption": "cacert-file",
+        "scOption": "cacert-file"
     },
     {
         "actionOption": "configFile",
@@ -23,37 +23,28 @@
     },
     {
         "actionOption": "dns",
-        "scOption": "dns"
+        "scOption": "dns-server"
     },
     {
-        "actionOption": "fastFailRegexps",
-        "scOption": "fast-fail-regexps"
-    },
-    {
-        "actionOption": "maxLogsize",
-        "scOption": "max-logsize"
+        "actionOption": "denyDomains",
+        "scOption": "deny-domains"
     },
     {
         "actionOption": "metricsAddress",
-        "scOption": "status-address"
+        "scOption": "api-address"
     },
     {
         "actionOption": "statusAddress",
         "scOption": "status-address"
     },
     {
-        "actionOption": "noAutodetect",
-        "scOption": "no-autodetect",
+        "actionOption": "tunnelPool",
+        "scOption": "tunnel-pool",
         "flag": true
     },
     {
-        "actionOption": "noRemoveCollidingTunnels",
-        "scOption": "no-remove-colliding-tunnels",
-        "flag": true
-    },
-    {
-        "actionOption": "noSSLBumpDomains",
-        "scOption": "no-ssl-bump-domains"
+        "actionOption": "tlsPassthroughDomains",
+        "scOption": "tls-passthrough-domains"
     },
     {
         "actionOption": "pac",
@@ -64,34 +55,23 @@
         "scOption": "proxy"
     },
     {
-        "actionOption": "proxyTunnel",
-        "scOption": "proxy-tunnel",
+        "actionOption": "proxySauce",
+        "scOption": "proxy-sauce",
         "flag": true
     },
     {
-        "actionOption": "proxyUserpwd",
-        "scOption": "proxy-userpwd"
-    },
-    {
         "actionOption": "region",
-        "scOption": "region"
+        "scOption": "region",
+        "required": true
     },
     {
         "actionOption": "scproxyPort",
         "scOption": "scproxy-port"
     },
     {
-        "actionOption": "sePort",
-        "scOption": "se-port"
-    },
-    {
         "actionOption": "sharedTunnel",
-        "scOption": "shared-tunnel",
+        "scOption": "shared",
         "flag": true
-    },
-    {
-        "actionOption": "tunnelCainfo",
-        "scOption": "tunnel-cainfo"
     },
     {
         "actionOption": "tunnelDomains",
@@ -103,16 +83,12 @@
     },
     {
         "actionOption": "tunnelName",
-        "scOption": "tunnel-name"
+        "scOption": "tunnel-name",
+        "required": true
     },
     {
         "actionOption": "tunnelPool",
         "scOption": "tunnel-pool",
-        "flag": true
-    },
-    {
-        "actionOption": "verbose",
-        "scOption": "verbose",
         "flag": true
     }
 ]
