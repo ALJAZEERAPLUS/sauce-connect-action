@@ -1,6 +1,5 @@
 import {addPath, info} from '@actions/core'
 import {cacheDir, downloadTool, extractTar, find} from '@actions/tool-cache'
-import {join} from 'path'
 
 export async function installSauceConnect(scVersion: string): Promise<void> {
     let scPath = find('sc', scVersion, process.arch)
@@ -26,12 +25,7 @@ export async function installSauceConnect(scVersion: string): Promise<void> {
         scPath = await cacheDir(extractedPath, 'sc', scVersion, process.arch)
     }
 
-    let binPath: string
-    if (parseFloat(scVersion) >= 5) {
-        binPath = scPath
-    } else {
-        binPath = join(scPath, name, 'bin')
-    }
+    const binPath: string = scPath
     info(`Adding ${binPath} to PATH`)
     addPath(binPath)
 }

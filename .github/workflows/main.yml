@@ -27,6 +27,10 @@ jobs:
                 tunnelName: github-action-tunnel
                 region: 'us-west'
                 scVersion: 5.2.2
+                id: sauce-connect
+
+            - name: Echo Step
+              run: echo "This step should run after Sauce Connect"
 
             - name: "Run Test"
               run: npm run test

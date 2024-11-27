@@ -24933,18 +24933,44 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core_1 = __nccwpck_require__(2186);
 const stop_sc_1 = __nccwpck_require__(4708);
-function run() {
+const fs_1 = __nccwpck_require__(7147);
+const path_1 = __nccwpck_require__(1017);
+function cleanup() {
     return __awaiter(this, void 0, void 0, function* () {
-        const pid = (0, core_1.getState)('scPid');
+        (0, core_1.info)('Starting post-action cleanup');
+        let pid;
+        // Try to get PID from GitHub Actions state
+        pid = (0, core_1.getState)('scPid');
+        // If not found, try to read from file
         if (!pid) {
-            (0, core_1.warning)('No state found. Assume that no sc ran in this workflow run.');
-            return;
+            const pidFile = (0, path_1.join)(process.env.GITHUB_WORKSPACE || '.', 'sc-pid.txt');
+            try {
+                pid = (0, fs_1.readFileSync)(pidFile, 'utf-8').trim();
+                (0, core_1.info)(`Retrieved PID from file: ${pid}`);
+                (0, fs_1.unlinkSync)(pidFile); // Delete the file after reading
+            }
+            catch (error) {
+                (0, core_1.warning)(`Failed to read PID file: ${error instanceof Error ? error.message : String(error)}`);
+            }
         }
-        yield (0, stop_sc_1.stopSc)(pid);
+        if (pid) {
+            try {
+                yield (0, stop_sc_1.stopSc)(pid);
+                (0, core_1.info)(`Successfully stopped Sauce Connect process with PID ${pid}`);
+            }
+            catch (error) {
+                (0, core_1.warning)(`Failed to stop Sauce Connect: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+        else {
+            (0, core_1.warning)('No Sauce Connect PID found, skipping cleanup');
+        }
+        (0, core_1.info)('Post-action cleanup completed');
     });
 }
-// eslint-disable-next-line github/no-then
-run().catch(error => (0, core_1.setFailed)(error.message));
+cleanup().catch(error => {
+    (0, core_1.setFailed)(`Post-action cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+});
 
 
 /***/ }),

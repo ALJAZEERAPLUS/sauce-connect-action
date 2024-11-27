@@ -23,3 +23,7 @@ export async function wait(dir: string): Promise<unknown> {
         })
     })
 }
+
+export function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}

@@ -1,14 +1,20 @@
-import {debug, getInput, isDebug, warning} from '@actions/core'
+import {
+    getInput,
+    isDebug,
+    warning,
+    info as coreInfo,
+    setFailed,
+    setOutput
+} from '@actions/core'
 import {which} from '@actions/io'
-import {spawn} from 'child_process'
+import {spawn, ChildProcess} from 'child_process'
 import {info} from 'console'
-import {mkdtempSync, readFileSync, existsSync, mkdirSync} from 'fs'
+import {mkdtempSync, writeFileSync} from 'fs'
 import {tmpdir} from 'os'
-import {dirname, join} from 'path'
+import {join} from 'path'
 import optionMappingJson from './option-mapping.json'
-import {stopSc} from './stop-sc'
-import {wait} from './wait'
 import axios from 'axios'
+import {delay} from './wait'
 
 const tmp = mkdtempSync(join(tmpdir(), `sauce-connect-action`))
 const LOG_FILE = join(tmp, 'sauce-connect.log')
@@ -25,14 +31,6 @@ const optionMappings: OptionMapping[] = optionMappingJson
 function buildOptions(): string[] {
     const params = ['run', `--log-file=${LOG_FILE}`]
     info(`Log file path: ${LOG_FILE}`)
-
-    if (!existsSync(tmp)) {
-        info(`Temporary directory does not exist. Creating: ${tmp}`)
-        mkdirSync(tmp, {recursive: true})
-        info('Temporary directory created')
-    } else {
-        info('Temporary directory already exists')
-    }
 
     for (const optionMapping of optionMappings) {
         const input = getInput(optionMapping.actionOption, {
@@ -51,51 +49,66 @@ function buildOptions(): string[] {
     return params
 }
 
-function getApiAddress(args: string[]): string {
-    const apiAddressArg = args.find(arg => arg.startsWith('--api-address='))
-    if (apiAddressArg) {
-        return apiAddressArg.split('=')[1]
-    }
-    throw new Error('API address not found in arguments')
-}
-
-export async function startSc(): Promise<string> {
+export async function startSc(): Promise<ChildProcess> {
     const cmd = await which('sc')
     const args = buildOptions()
 
+    // Extract the API address from the arguments
+    const apiAddressArg = args.find(arg => arg.startsWith('--api-address='))
+    const apiAddress = apiAddressArg
+        ? apiAddressArg.split('=')[1]
+        : '0.0.0.0:8080'
+
     info(`[command]${cmd} ${args.map(arg => `${arg}`).join(' ')}`)
     const child = spawn(cmd, args, {
-        stdio: 'ignore',
+        stdio: ['ignore'],
         detached: true
     })
-    child.unref()
 
-    let errorOccurred = false
+    child.on('exit', (code, signal) => {
+        if (code !== null) {
+            warning(`Sauce Connect process exited with code ${code}`)
+        } else if (signal !== null) {
+            warning(`Sauce Connect process was killed with signal ${signal}`)
+        }
+    })
+
     try {
-        const response = await axios.get(`http://${getApiAddress(args)}/readyz`)
+        info('Waiting for Sauce Connect to start...')
+        await delay(30000) // Wait for 30 seconds
+
+        info('Checking if Sauce Connect tunnel is ready...')
+        info(`Attempting to connect to API at: ${apiAddress}`)
+        const response = await axios.get(`http://${apiAddress}/readyz`, {
+            timeout: 10000
+        })
         if (response.status === 200) {
             info('Sauce Connect is ready')
-            return String(child.pid)
+            return child
         }
     } catch (e) {
-        errorOccurred = true
-        if (child.pid) {
-            await stopSc(String(child.pid))
-        }
+        warning(`Error occurred: ${e}`)
+        child.kill()
         throw e
-    } finally {
-        if (errorOccurred || isDebug()) {
-            try {
-                const log = readFileSync(LOG_FILE, {
-                    encoding: 'utf-8'
-                })
-                ;(errorOccurred ? warning : debug)(`Sauce connect log: ${log}`)
-            } catch (e2) {
-                warning(`Unable to access Sauce connect log file: ${e2}.
-                This could be caused by an error with the Sauce Connect or Github Action configuration that prevented Sauce Connect from starting up.
-                Please verify your configuration and ensure any referenced files are available.`)
-            }
-        }
     }
     throw new Error('Sauce Connect did not start within the expected time.')
+}
+
+export async function runSc(): Promise<string> {
+    try {
+        const scProcess = await startSc()
+        const pid = scProcess.pid?.toString()
+        if (!pid) {
+            throw new Error('Failed to get PID from Sauce Connect process')
+        }
+        coreInfo(`Sauce Connect started with PID ${pid}`)
+        return pid
+    } catch (error) {
+        setFailed(
+            `Error in Sauce Connect: ${
+                error instanceof Error ? error.message : String(error)
+            }`
+        )
+        throw error
+    }
 }

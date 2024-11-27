@@ -32295,7 +32295,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.installSauceConnect = installSauceConnect;
 const core_1 = __nccwpck_require__(2186);
 const tool_cache_1 = __nccwpck_require__(7784);
-const path_1 = __nccwpck_require__(1017);
 function installSauceConnect(scVersion) {
     return __awaiter(this, void 0, void 0, function* () {
         let scPath = (0, tool_cache_1.find)('sc', scVersion, process.arch);
@@ -32314,13 +32313,7 @@ function installSauceConnect(scVersion) {
             (0, core_1.info)('Adding to the cache ...');
             scPath = yield (0, tool_cache_1.cacheDir)(extractedPath, 'sc', scVersion, process.arch);
         }
-        let binPath;
-        if (parseFloat(scVersion) >= 5) {
-            binPath = scPath;
-        }
-        else {
-            binPath = (0, path_1.join)(scPath, name, 'bin');
-        }
+        const binPath = scPath;
         (0, core_1.info)(`Adding ${binPath} to PATH`);
         (0, core_1.addPath)(binPath);
     });
@@ -32348,36 +32341,60 @@ const core_1 = __nccwpck_require__(2186);
 const installer_1 = __nccwpck_require__(2574);
 const start_sc_1 = __nccwpck_require__(9820);
 const fs_1 = __nccwpck_require__(7147);
+const path_1 = __nccwpck_require__(1017);
 const retryDelays = [1, 1, 1, 2, 3, 4, 5, 10, 20, 40, 60].map(a => a * 1000);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        const scVersion = (0, core_1.getInput)('scVersion');
-        const retryTimeout = parseInt((0, core_1.getInput)('retryTimeout'), 10) * 1000 * 60;
-        const startTime = Date.now();
-        yield (0, installer_1.installSauceConnect)(scVersion);
-        for (let i = 0;; i++) {
-            try {
-                const pid = yield (0, start_sc_1.startSc)();
-                const githubState = process.env.GITHUB_STATE || '/tmp/github_state';
-                (0, fs_1.appendFileSync)(githubState, `scPid=${pid}`, {
-                    encoding: 'utf8'
-                });
-                return;
-            }
-            catch (e) {
-                if (Date.now() - startTime >= retryTimeout) {
-                    break;
+        try {
+            const scVersion = (0, core_1.getInput)('scVersion');
+            const retryTimeout = parseInt((0, core_1.getInput)('retryTimeout'), 10) * 1000 * 60;
+            const startTime = Date.now();
+            yield (0, installer_1.installSauceConnect)(scVersion);
+            let pid;
+            for (let i = 0;; i++) {
+                try {
+                    pid = yield (0, start_sc_1.runSc)();
+                    // Set output for GitHub Actions
+                    (0, core_1.setOutput)('sc-pid', pid);
+                    // Write to GITHUB_STATE for GitHub Actions
+                    const githubState = process.env.GITHUB_STATE;
+                    if (githubState) {
+                        (0, fs_1.appendFileSync)(githubState, `scPid=${pid}\n`, {
+                            encoding: 'utf8'
+                        });
+                    }
+                    // Write to file for local testing (act)
+                    const pidFile = (0, path_1.join)(process.env.GITHUB_WORKSPACE || '.', 'sc-pid.txt');
+                    (0, fs_1.writeFileSync)(pidFile, pid, { encoding: 'utf8' });
+                    (0, core_1.info)(`Sauce Connect started with PID ${pid}`);
+                    (0, core_1.info)('Main action completed, moving to next step');
+                    break; // Exit the retry loop on success
                 }
-                const delay = retryDelays[Math.min(retryDelays.length - 1, i)];
-                (0, core_1.warning)(`Error occurred on attempt ${i + 1} (${e instanceof Error ? e.message : e}). Retrying in ${delay} ms...`);
-                yield new Promise(resolve => setTimeout(resolve, delay));
+                catch (e) {
+                    if (Date.now() - startTime >= retryTimeout) {
+                        throw new Error('Timed out waiting for Sauce Connect to start');
+                    }
+                    const delay = retryDelays[Math.min(retryDelays.length - 1, i)];
+                    (0, core_1.warning)(`Error occurred on attempt ${i + 1} (${e instanceof Error ? e.message : String(e)}). Retrying in ${delay} ms...`);
+                    yield new Promise(resolve => setTimeout(resolve, delay));
+                }
             }
+            // Add a small delay to ensure all logs are flushed
+            yield new Promise(resolve => setTimeout(resolve, 1000));
         }
-        throw new Error('Timed out');
+        catch (error) {
+            (0, core_1.setFailed)(`Sauce Connect action failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
     });
 }
-// eslint-disable-next-line github/no-then
-run().catch(error => (0, core_1.setFailed)(error.message));
+// Run the action and ensure the process exits
+run().then(() => {
+    (0, core_1.info)('Action completed successfully');
+    process.exit(0);
+}).catch((error) => {
+    (0, core_1.setFailed)(`Unhandled error in action: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+});
 
 
 /***/ }),
@@ -32401,6 +32418,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.startSc = startSc;
+exports.runSc = runSc;
 const core_1 = __nccwpck_require__(2186);
 const io_1 = __nccwpck_require__(7436);
 const child_process_1 = __nccwpck_require__(2081);
@@ -32409,22 +32427,14 @@ const fs_1 = __nccwpck_require__(7147);
 const os_1 = __nccwpck_require__(2037);
 const path_1 = __nccwpck_require__(1017);
 const option_mapping_json_1 = __importDefault(__nccwpck_require__(3377));
-const stop_sc_1 = __nccwpck_require__(4708);
 const axios_1 = __importDefault(__nccwpck_require__(8757));
+const wait_1 = __nccwpck_require__(5259);
 const tmp = (0, fs_1.mkdtempSync)((0, path_1.join)((0, os_1.tmpdir)(), `sauce-connect-action`));
 const LOG_FILE = (0, path_1.join)(tmp, 'sauce-connect.log');
 const optionMappings = option_mapping_json_1.default;
 function buildOptions() {
     const params = ['run', `--log-file=${LOG_FILE}`];
     (0, console_1.info)(`Log file path: ${LOG_FILE}`);
-    if (!(0, fs_1.existsSync)(tmp)) {
-        (0, console_1.info)(`Temporary directory does not exist. Creating: ${tmp}`);
-        (0, fs_1.mkdirSync)(tmp, { recursive: true });
-        (0, console_1.info)('Temporary directory created');
-    }
-    else {
-        (0, console_1.info)('Temporary directory already exists');
-    }
     for (const optionMapping of optionMappings) {
         const input = (0, core_1.getInput)(optionMapping.actionOption, {
             required: optionMapping.required
@@ -32442,61 +32452,72 @@ function buildOptions() {
     }
     return params;
 }
-function getApiAddress(args) {
-    const apiAddressArg = args.find(arg => arg.startsWith('--api-address='));
-    if (apiAddressArg) {
-        return apiAddressArg.split('=')[1];
-    }
-    throw new Error('API address not found in arguments');
-}
 function startSc() {
     return __awaiter(this, void 0, void 0, function* () {
         const cmd = yield (0, io_1.which)('sc');
         const args = buildOptions();
+        // Extract the API address from the arguments
+        const apiAddressArg = args.find(arg => arg.startsWith('--api-address='));
+        const apiAddress = apiAddressArg
+            ? apiAddressArg.split('=')[1]
+            : '0.0.0.0:8080';
         (0, console_1.info)(`[command]${cmd} ${args.map(arg => `${arg}`).join(' ')}`);
         const child = (0, child_process_1.spawn)(cmd, args, {
-            stdio: 'ignore',
+            stdio: ['ignore'],
             detached: true
         });
-        child.unref();
-        let errorOccurred = false;
+        child.on('exit', (code, signal) => {
+            if (code !== null) {
+                (0, core_1.warning)(`Sauce Connect process exited with code ${code}`);
+            }
+            else if (signal !== null) {
+                (0, core_1.warning)(`Sauce Connect process was killed with signal ${signal}`);
+            }
+        });
         try {
-            const response = yield axios_1.default.get(`http://${getApiAddress(args)}/readyz`);
+            (0, console_1.info)('Waiting for Sauce Connect to start...');
+            yield (0, wait_1.delay)(30000); // Wait for 30 seconds
+            (0, console_1.info)('Checking if Sauce Connect tunnel is ready...');
+            (0, console_1.info)(`Attempting to connect to API at: ${apiAddress}`);
+            const response = yield axios_1.default.get(`http://${apiAddress}/readyz`, {
+                timeout: 10000
+            });
             if (response.status === 200) {
                 (0, console_1.info)('Sauce Connect is ready');
-                return String(child.pid);
+                return child;
             }
         }
         catch (e) {
-            errorOccurred = true;
-            if (child.pid) {
-                yield (0, stop_sc_1.stopSc)(String(child.pid));
-            }
+            (0, core_1.warning)(`Error occurred: ${e}`);
+            child.kill();
             throw e;
         }
-        finally {
-            if (errorOccurred || (0, core_1.isDebug)()) {
-                try {
-                    const log = (0, fs_1.readFileSync)(LOG_FILE, {
-                        encoding: 'utf-8'
-                    });
-                    (errorOccurred ? core_1.warning : core_1.debug)(`Sauce connect log: ${log}`);
-                }
-                catch (e2) {
-                    (0, core_1.warning)(`Unable to access Sauce connect log file: ${e2}.
-                This could be caused by an error with the Sauce Connect or Github Action configuration that prevented Sauce Connect from starting up.
-                Please verify your configuration and ensure any referenced files are available.`);
-                }
-            }
-        }
         throw new Error('Sauce Connect did not start within the expected time.');
+    });
+}
+function runSc() {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        try {
+            const scProcess = yield startSc();
+            const pid = (_a = scProcess.pid) === null || _a === void 0 ? void 0 : _a.toString();
+            if (!pid) {
+                throw new Error('Failed to get PID from Sauce Connect process');
+            }
+            (0, core_1.info)(`Sauce Connect started with PID ${pid}`);
+            return pid;
+        }
+        catch (error) {
+            (0, core_1.setFailed)(`Error in Sauce Connect: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
     });
 }
 
 
 /***/ }),
 
-/***/ 4708:
+/***/ 5259:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -32510,24 +32531,31 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.stopSc = stopSc;
-const core_1 = __nccwpck_require__(2186);
-const process_1 = __importDefault(__nccwpck_require__(7282));
-function stopSc(pid) {
+exports.wait = wait;
+exports.delay = delay;
+const fs_1 = __nccwpck_require__(7147);
+const timeoutSeconds = 60;
+function wait(dir) {
     return __awaiter(this, void 0, void 0, function* () {
-        (0, core_1.info)(`Trying to stop sc with pid ${pid}`);
-        try {
-            process_1.default.kill(parseInt(pid));
-        }
-        catch (e) {
-            (0, core_1.warning)(`Failed to stop sc (${e instanceof Error ? e.message : e})). It might already have stopped`);
-        }
-        (0, core_1.info)('Done');
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                watcher.close();
+                reject(new Error(`timeout: SC was not ready even after we wait ${timeoutSeconds} secs`));
+            }, timeoutSeconds * 1000);
+            const watcher = (0, fs_1.watch)(dir, (eventType, filename) => {
+                if (filename !== 'sc.ready') {
+                    return;
+                }
+                clearTimeout(timeout);
+                watcher.close();
+                resolve(void 0);
+            });
+        });
     });
+}
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
@@ -32682,14 +32710,6 @@ module.exports = require("path");
 
 "use strict";
 module.exports = require("perf_hooks");
-
-/***/ }),
-
-/***/ 7282:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("process");
 
 /***/ }),
 

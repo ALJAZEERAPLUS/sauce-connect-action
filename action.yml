@@ -30,7 +30,7 @@ inputs:
     apiAddress:
         description: Host:port for the status server used to expose client metrics.
         required: false
-        default: 127.0.0.1:8082
+        default: 0.0.0.0:8080
     statusAddress:
         description: Host:port for the status server used to expose client status.
         required: false
@@ -72,6 +72,9 @@ inputs:
         description: Do not retry if this amount of minutes has passed since starting.
         required: false
         default: '2'
+outputs:
+    sc-pid:
+        description: 'PID of the Sauce Connect process'
 runs:
     using: 'node20'
     main: 'dist/main/index.js'
