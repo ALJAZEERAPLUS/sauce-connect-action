@@ -12,7 +12,7 @@ inputs:
     accessKey:
         description: Sauce Labs API Key.
         required: true
-    cacert-file:
+    cacertFile:
         description: CA certificate bundle to use for verifying REST connections.
         required: false
     configFile:
@@ -27,9 +27,10 @@ inputs:
     denyDomains:
         description: Comma-separated list of domains that you want to deny access through the tunnel.
         required: false
-    metricsAddress:
+    apiAddress:
         description: Host:port for the status server used to expose client metrics.
         required: false
+        default: 127.0.0.1:8082
     statusAddress:
         description: Host:port for the status server used to expose client status.
         required: false
@@ -70,7 +71,7 @@ inputs:
     retryTimeout:
         description: Do not retry if this amount of minutes has passed since starting.
         required: false
-        default: '10'
+        default: '2'
 runs:
     using: 'node20'
     main: 'dist/main/index.js'

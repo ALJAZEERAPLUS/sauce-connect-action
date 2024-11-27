@@ -10,7 +10,7 @@
         "required": true
     },
     {
-        "actionOption": "cacert-file",
+        "actionOption": "cacertFile",
         "scOption": "cacert-file"
     },
     {
@@ -30,7 +30,7 @@
         "scOption": "deny-domains"
     },
     {
-        "actionOption": "metricsAddress",
+        "actionOption": "apiAddress",
         "scOption": "api-address"
     },
     {
@@ -80,6 +80,6 @@
     {
         "actionOption": "tunnelName",
         "scOption": "tunnel-name",
-        "required": true
+        "required":true
     }
 ]

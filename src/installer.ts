@@ -26,7 +26,12 @@ export async function installSauceConnect(scVersion: string): Promise<void> {
         scPath = await cacheDir(extractedPath, 'sc', scVersion, process.arch)
     }
 
-    const binPath = join(scPath, name, 'bin')
+    let binPath: string
+    if (parseFloat(scVersion) >= 5) {
+        binPath = scPath
+    } else {
+        binPath = join(scPath, name, 'bin')
+    }
     info(`Adding ${binPath} to PATH`)
     addPath(binPath)
 }

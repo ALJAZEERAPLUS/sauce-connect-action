@@ -2,16 +2,16 @@ import {debug, getInput, isDebug, warning} from '@actions/core'
 import {which} from '@actions/io'
 import {spawn} from 'child_process'
 import {info} from 'console'
-import {mkdtempSync, readFileSync} from 'fs'
+import {mkdtempSync, readFileSync, existsSync, mkdirSync} from 'fs'
 import {tmpdir} from 'os'
 import {dirname, join} from 'path'
 import optionMappingJson from './option-mapping.json'
 import {stopSc} from './stop-sc'
 import {wait} from './wait'
+import axios from 'axios'
 
 const tmp = mkdtempSync(join(tmpdir(), `sauce-connect-action`))
 const LOG_FILE = join(tmp, 'sauce-connect.log')
-const READY_FILE = join(tmp, 'sc.ready')
 
 type OptionMapping = {
     actionOption: string
@@ -23,11 +23,16 @@ type OptionMapping = {
 const optionMappings: OptionMapping[] = optionMappingJson
 
 function buildOptions(): string[] {
-    const params = [
-        `--log-file=${LOG_FILE}`,
-        `--extra-info={"runner": "github-action"}`,
-        `--readyfile=${READY_FILE}`
-    ]
+    const params = ['run', `--log-file=${LOG_FILE}`]
+    info(`Log file path: ${LOG_FILE}`)
+
+    if (!existsSync(tmp)) {
+        info(`Temporary directory does not exist. Creating: ${tmp}`)
+        mkdirSync(tmp, {recursive: true})
+        info('Temporary directory created')
+    } else {
+        info('Temporary directory already exists')
+    }
 
     for (const optionMapping of optionMappings) {
         const input = getInput(optionMapping.actionOption, {
@@ -46,6 +51,14 @@ function buildOptions(): string[] {
     return params
 }
 
+function getApiAddress(args: string[]): string {
+    const apiAddressArg = args.find(arg => arg.startsWith('--api-address='))
+    if (apiAddressArg) {
+        return apiAddressArg.split('=')[1]
+    }
+    throw new Error('API address not found in arguments')
+}
+
 export async function startSc(): Promise<string> {
     const cmd = await which('sc')
     const args = buildOptions()
@@ -59,9 +72,11 @@ export async function startSc(): Promise<string> {
 
     let errorOccurred = false
     try {
-        await wait(dirname(READY_FILE))
-        info('SC ready')
-        return String(child.pid)
+        const response = await axios.get(`http://${getApiAddress(args)}/readyz`)
+        if (response.status === 200) {
+            info('Sauce Connect is ready')
+            return String(child.pid)
+        }
     } catch (e) {
         errorOccurred = true
         if (child.pid) {
@@ -82,4 +97,5 @@ export async function startSc(): Promise<string> {
             }
         }
     }
+    throw new Error('Sauce Connect did not start within the expected time.')
 }
