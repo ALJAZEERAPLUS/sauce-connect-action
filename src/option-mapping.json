@@ -65,10 +65,6 @@
         "required": true
     },
     {
-        "actionOption": "scproxyPort",
-        "scOption": "scproxy-port"
-    },
-    {
         "actionOption": "sharedTunnel",
         "scOption": "shared",
         "flag": true
@@ -85,10 +81,5 @@
         "actionOption": "tunnelName",
         "scOption": "tunnel-name",
         "required": true
-    },
-    {
-        "actionOption": "tunnelPool",
-        "scOption": "tunnel-pool",
-        "flag": true
     }
 ]
