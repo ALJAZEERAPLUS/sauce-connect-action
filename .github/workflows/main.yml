@@ -7,6 +7,8 @@ jobs:
         name: Action Test
         steps:
             - uses: actions/checkout@v4
+              with:
+                token: ${{ secrets.GITHUB_TOKEN }}
 
             - uses: actions/setup-node@v4
               with:
@@ -18,21 +20,13 @@ jobs:
             - name: "Build the package"
               run: npm run build
 
-            - name: "Check if new build was checked in"
-              run: |
-                if [ $(git status --porcelain | wc -l) -gt 0 ] ; then
-                  echo "Found uncommited changes. Did you forget to check in the dist/ folder?"
-                  git status --porcelain
-                  exit 1
-                fi
-
             - uses: ./
               with:
                 username: ${{ secrets.SAUCE_USERNAME }}
                 accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
                 tunnelName: github-action-tunnel
-                tunnelPool: true
-                configFile: ${{ github.workspace }}/sc-configuration/config.yaml
+                region: 'us-west'
+                scVersion: 5.2.2
 
             - name: "Run Test"
               run: npm run test

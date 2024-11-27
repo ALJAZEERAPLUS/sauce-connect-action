@@ -4,17 +4,18 @@ import {join} from 'path'
 
 export async function installSauceConnect(scVersion: string): Promise<void> {
     let scPath = find('sc', scVersion, process.arch)
-    const name = `sauce-connect-${scVersion}_linux.${
-        process.arch === 'arm64' ? '-arm64' : ''
-    }`
+    
+    // Log runner data
+    info(`Running on OS: ${process.platform}, Architecture: ${process.arch}`)
+    
+    const name = `sauce-connect-${scVersion}_linux.${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}`
 
     if (scPath) {
         info(`Found in cache @ ${scPath}`)
     } else {
-        info(`Attempting to download sauce-connect@${scVersion}...`)
-        const downloadedPath = await downloadTool(
-            `https://saucelabs.com/downloads/sauce-connect/${scVersion}/${name}.tar.gz`
-        )
+        const downloadLink = `https://saucelabs.com/downloads/sauce-connect/${scVersion}/${name}.tar.gz`
+        info(`Attempting to download sauce-connect ${downloadLink} ...`)
+        const downloadedPath = await downloadTool(downloadLink)
 
         info('Extracting ...')
         const extractedPath = await extractTar(downloadedPath)
@@ -23,5 +24,7 @@ export async function installSauceConnect(scVersion: string): Promise<void> {
         scPath = await cacheDir(extractedPath, 'sc', scVersion, process.arch)
     }
 
-    addPath(join(scPath, name, 'bin'))
+    const binPath = join(scPath, name, 'bin')
+    info(`Adding ${binPath} to PATH`)
+    addPath(binPath)
 }
