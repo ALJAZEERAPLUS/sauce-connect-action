@@ -4,11 +4,13 @@ import {join} from 'path'
 
 export async function installSauceConnect(scVersion: string): Promise<void> {
     let scPath = find('sc', scVersion, process.arch)
-    
+
     // Log runner data
     info(`Running on OS: ${process.platform}, Architecture: ${process.arch}`)
-    
-    const name = `sauce-connect-${scVersion}_linux.${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}`
+
+    const name = `sauce-connect-${scVersion}_linux.${
+        process.arch === 'arm64' ? 'aarch64' : 'x86_64'
+    }`
 
     if (scPath) {
         info(`Found in cache @ ${scPath}`)

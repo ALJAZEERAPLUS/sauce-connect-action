@@ -28800,19 +28800,24 @@ const path_1 = __nccwpck_require__(1017);
 function installSauceConnect(scVersion) {
     return __awaiter(this, void 0, void 0, function* () {
         let scPath = (0, tool_cache_1.find)('sc', scVersion, process.arch);
-        const name = `sauce-connect-${scVersion}_linux.${process.arch === 'arm64' ? '-arm64' : ''}`;
+        // Log runner data
+        (0, core_1.info)(`Running on OS: ${process.platform}, Architecture: ${process.arch}`);
+        const name = `sauce-connect-${scVersion}_linux.${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}`;
         if (scPath) {
             (0, core_1.info)(`Found in cache @ ${scPath}`);
         }
         else {
-            (0, core_1.info)(`Attempting to download sauce-connect@${scVersion}...`);
-            const downloadedPath = yield (0, tool_cache_1.downloadTool)(`https://saucelabs.com/downloads/sauce-connect/${scVersion}/${name}.tar.gz`);
+            const downloadLink = `https://saucelabs.com/downloads/sauce-connect/${scVersion}/${name}.tar.gz`;
+            (0, core_1.info)(`Attempting to download sauce-connect ${downloadLink} ...`);
+            const downloadedPath = yield (0, tool_cache_1.downloadTool)(downloadLink);
             (0, core_1.info)('Extracting ...');
             const extractedPath = yield (0, tool_cache_1.extractTar)(downloadedPath);
             (0, core_1.info)('Adding to the cache ...');
             scPath = yield (0, tool_cache_1.cacheDir)(extractedPath, 'sc', scVersion, process.arch);
         }
-        (0, core_1.addPath)((0, path_1.join)(scPath, name, 'bin'));
+        const binPath = (0, path_1.join)(scPath, name, 'bin');
+        (0, core_1.info)(`Adding ${binPath} to PATH`);
+        (0, core_1.addPath)(binPath);
     });
 }
 
